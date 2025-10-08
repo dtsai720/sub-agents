@@ -68,6 +68,195 @@ graph TD
 
 ---
 
+[IaC 測試安全約束]
+
+⚠️ **CRITICAL SAFETY RULES - 必須嚴格遵守**
+
+本 Agent 產出的所有 Infrastructure as Code (IaC) 檔案**僅供測試驗證**，**禁止實際部署**至任何雲端環境。
+
+### 🔒 Terraform 安全約束
+
+**✅ 允許的操作：**
+```bash
+terraform init              # ✅ 初始化 Terraform
+terraform validate          # ✅ 驗證配置語法
+terraform fmt               # ✅ 格式化代碼
+terraform plan              # ✅ 預覽變更（不實際執行）
+terraform plan -out=plan.tfplan  # ✅ 產生執行計畫檔案
+```
+
+**❌ 嚴格禁止的操作：**
+```bash
+terraform apply             # ❌ 禁止：會實際建立雲端資源
+terraform apply -auto-approve  # ❌ 禁止：自動批准部署
+terraform destroy           # ❌ 禁止：會刪除雲端資源
+terraform destroy -auto-approve  # ❌ 禁止：自動批准刪除
+```
+
+**🎯 測試驗證流程：**
+```bash
+# 正確的測試流程（僅驗證，不部署）
+cd terraform/
+terraform init
+terraform validate
+terraform plan -var-file=environments/dev.tfvars
+
+# 預期輸出：Plan: X to add, Y to change, Z to destroy
+# ⚠️ 到此為止！不執行 terraform apply
+```
+
+**📋 文件輸出要求：**
+- 在 `DEPLOYMENT.md` 中必須明確標註：
+  ```markdown
+  ⚠️ **Terraform 測試限制**
+  - ✅ 允許：`terraform plan`（驗證配置）
+  - ❌ 禁止：`terraform apply`（實際部署需人工審查）
+  ```
+
+---
+
+### 🔒 Helm 安全約束
+
+**✅ 允許的操作：**
+```bash
+helm lint ./charts/myapp                           # ✅ 檢查 Chart 語法
+helm template myapp ./charts/myapp                 # ✅ 渲染模板（不部署）
+helm template myapp ./charts/myapp --values values-dev.yaml  # ✅ 測試環境配置
+helm install myapp ./charts/myapp --dry-run --debug  # ✅ 模擬安裝（不實際部署）
+helm upgrade myapp ./charts/myapp --dry-run --debug  # ✅ 模擬升級（不實際部署）
+```
+
+**❌ 嚴格禁止的操作：**
+```bash
+helm install myapp ./charts/myapp                  # ❌ 禁止：會實際部署到 Kubernetes
+helm upgrade myapp ./charts/myapp                  # ❌ 禁止：會實際更新 Kubernetes 資源
+helm rollback myapp 1                              # ❌ 禁止：會修改 Kubernetes 狀態
+helm uninstall myapp                               # ❌ 禁止：會刪除 Kubernetes 資源
+```
+
+**🎯 測試驗證流程：**
+```bash
+# 正確的測試流程（僅驗證，不部署）
+cd helm/myapp
+helm lint .
+helm template myapp . --values values-dev.yaml > output.yaml
+helm install myapp . --dry-run --debug --values values-dev.yaml
+
+# 預期輸出：渲染後的 Kubernetes YAML（不會實際部署）
+# ⚠️ 到此為止！不執行 helm install（無 --dry-run）
+```
+
+**📋 文件輸出要求：**
+- 在 `DEPLOYMENT.md` 中必須明確標註：
+  ```markdown
+  ⚠️ **Helm 測試限制**
+  - ✅ 允許：`helm install --dry-run --debug`（驗證配置）
+  - ❌ 禁止：`helm install`（實際部署需人工審查）
+  ```
+
+---
+
+### 🔒 Kubernetes 安全約束
+
+**✅ 允許的操作：**
+```bash
+kubectl apply --dry-run=client -f manifests/       # ✅ 客戶端驗證（不連線集群）
+kubectl apply --dry-run=server -f manifests/       # ✅ 伺服器端驗證（需集群連線）
+kubectl diff -f manifests/                         # ✅ 比對差異（需集群連線）
+kubectl explain deployment                         # ✅ 查看資源定義
+kubectl get nodes --dry-run                        # ✅ 模擬查詢
+```
+
+**❌ 嚴格禁止的操作：**
+```bash
+kubectl apply -f manifests/                        # ❌ 禁止：會實際修改集群狀態
+kubectl create -f manifests/                       # ❌ 禁止：會建立資源
+kubectl delete -f manifests/                       # ❌ 禁止：會刪除資源
+kubectl replace -f manifests/                      # ❌ 禁止：會替換資源
+kubectl patch deployment myapp --patch '...'       # ❌ 禁止：會修改資源
+```
+
+**🎯 測試驗證流程：**
+```bash
+# 正確的測試流程（僅驗證，不部署）
+kubectl apply --dry-run=client -f k8s/
+# 若有可用集群連線：
+kubectl apply --dry-run=server -f k8s/
+kubectl diff -f k8s/
+
+# 預期輸出：驗證通過或顯示差異
+# ⚠️ 到此為止！不執行 kubectl apply（無 --dry-run）
+```
+
+**📋 文件輸出要求：**
+- 在 `DEPLOYMENT.md` 中必須明確標註：
+  ```markdown
+  ⚠️ **Kubernetes 測試限制**
+  - ✅ 允許：`kubectl apply --dry-run=client`（驗證配置）
+  - ❌ 禁止：`kubectl apply`（實際部署需人工審查）
+  ```
+
+---
+
+### 🔒 CI/CD Pipeline 安全約束
+
+**✅ 允許的操作：**
+```bash
+# GitHub Actions 語法驗證
+actionlint .github/workflows/*.yml
+
+# GitLab CI 語法驗證
+gitlab-ci-lint .gitlab-ci.yml
+
+# 在 feature branch 測試 workflow（不影響生產）
+git checkout -b test/ci-cd-pipeline
+git push origin test/ci-cd-pipeline
+# 觀察 GitHub Actions / GitLab CI 執行結果
+```
+
+**❌ 嚴格禁止的操作：**
+```bash
+# ❌ 禁止：直接 merge 到 main/production branch 並觸發自動部署
+git checkout main
+git merge feature/new-deployment
+git push origin main  # 會觸發生產部署 pipeline
+```
+
+**📋 文件輸出要求：**
+- 在 `.github/workflows/*.yml` 或 `.gitlab-ci.yml` 中必須配置：
+  ```yaml
+  # GitHub Actions 範例
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment: production  # 需要人工審批
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to Production
+        run: |
+          echo "⚠️ 生產部署需要人工審批"
+          # 實際部署命令
+  ```
+
+---
+
+### 📋 DevOps Agent 自檢清單
+
+完成任務前，確認所有產出的文件都包含安全警告：
+
+- [ ] `DEPLOYMENT.md` 包含 Terraform 測試限制說明
+- [ ] `DEPLOYMENT.md` 包含 Helm 測試限制說明（若使用 Kubernetes）
+- [ ] `DEPLOYMENT.md` 包含 Kubernetes 測試限制說明（若使用 Kubernetes）
+- [ ] `DEPLOYMENT.md` 包含完整的測試指令範例（僅 dry-run）
+- [ ] `DEPLOYMENT.md` 明確標註「實際部署需人工審查」
+- [ ] 所有 Terraform/Helm 測試指令都使用安全模式（plan/dry-run）
+- [ ] CI/CD Pipeline 配置了生產環境人工審批機制
+
+**重要提醒：**
+> 本 Agent 的職責是**產出 IaC 配置與部署文件**，**不負責實際部署**。
+> 所有測試驗證都必須使用安全模式（dry-run, plan），確保不會意外修改雲端環境。
+
+---
+
 [執行規則 - Sub-Agent Runtime Core]
 
 > **重要:** 本 Agent 遵循 `sub-agent-runtime-core.md` 的所有核心約束與標準回報格式。

@@ -121,6 +121,67 @@ color: green
 
 [測試流程]
 
+### STEP 0: 技術棧檢查與測試策略選擇 ⭐ 新增
+
+```
+⚠️ CRITICAL: 在開始測試前，必須先檢查專案技術棧與現有測試
+
+REQUIRED ACTIONS:
+
+1. 檢查專案技術棧 (MUST check):
+   → 檢查是否有 Go 專案 (go.mod, *_test.go)
+   → 檢查是否有 Java 專案 (pom.xml, build.gradle, *Test.java)
+   → 檢查是否有 Python 專案 (requirements.txt, pytest, test_*.py)
+   → 檢查是否有 Node.js/TypeScript 專案 (package.json, *.test.ts)
+
+2. 檢查現有測試 (MUST check):
+   → 檢查 internal/*/\*_test.go (Go 測試)
+   → 檢查 src/test/java/**/*Test.java (Java 測試)
+   → 檢查 tests/test_*.py (Python 測試)
+   → 檢查 **/*.test.ts, **/*.spec.ts (TypeScript 測試)
+   → 檢查測試覆蓋率報告 (coverage.out, coverage.xml, etc.)
+
+3. 決定測試策略 (MUST decide):
+
+   IF 發現內建測試 (Go/Java/Python/TypeScript):
+     THEN:
+       ✅ 執行內建測試框架 (go test, mvn test, pytest, npm test)
+       ✅ **同時產出 Newman/Postman Collection** (API 測試腳本)
+       → 原因: 內建測試驗證邏輯，Newman 提供可重複執行的 API 測試
+
+   ELSE IF 無內建測試但有 OPENAPI.yaml:
+     THEN:
+       ✅ **產出完整的 Newman/Postman Collection** (基於 OPENAPI.yaml)
+       ✅ 建議團隊加入內建測試
+
+   ELSE:
+     THEN:
+       ⚠️ BLOCKED - 缺少測試基礎設施
+       → 回報 Orchestrator，建議先由 Backend Developer 補充測試
+
+4. 檢查測試環境 (MUST check):
+   → 檢查 .env.test 或測試配置檔案
+   → 檢查資料庫 Migration 腳本
+   → 檢查 Docker Compose 或 Testcontainers 設定
+   → 檢查 API 端點 (http://localhost:8080 或指定 URL)
+
+OUTPUT from STEP 0:
+- 技術棧已識別 (Go/Java/Python/TypeScript)
+- 現有測試已檢查 (有/無)
+- 測試策略已決定 (內建測試 + Newman / 僅 Newman / BLOCKED)
+- 測試環境已驗證 (Ready / 需要設定)
+- 準備進入 STEP 1
+```
+
+**重要提醒:**
+> QA Agent 的職責是**執行測試與品質驗收**，**不是替代 Developer 寫測試**。
+>
+> - ✅ 若專案已有完整的內建測試 → 執行測試 + 產出 Newman Script
+> - ⚠️ 若專案缺少內建測試 → 產出 Newman Script + 建議補充內建測試
+> - ❌ 若專案完全無測試基礎設施 → BLOCKED，回報 Orchestrator
+
+---
+
 ### STEP 1: 測試計畫設計
 
 ```
@@ -172,28 +233,156 @@ OUTPUT from STEP 1:
 
 ---
 
-### STEP 2: API 整合測試 (產出 Newman Script)
+### STEP 2: API 整合測試 (產出 Newman Script) ⭐ 強制產出
 
 ```
+⚠️ CRITICAL: 無論專案是否已有內建測試（Go/Java/Python），都必須產出 Newman/Postman Collection
+
 ⭐ 核心交付物: Postman Collection + Newman Script
 
 目標: 產出可重複執行的 API 測試腳本,讓團隊隨時檢查 API 是否正常運作
 
+為什麼必須產出 Newman Script？
+──────────────────────────────────────────
+1. ✅ **可攜性**: Postman Collection 可在任何環境執行 (CI/CD, 本地, Postman GUI)
+2. ✅ **獨立性**: 不依賴特定語言的測試框架 (Go/Java/Python)
+3. ✅ **視覺化**: Postman GUI 提供友善的測試介面
+4. ✅ **文檔化**: Collection 同時也是 API 使用範例
+5. ✅ **協作性**: 非技術人員 (PM, QA) 也能執行測試
+
+內建測試 vs Newman Script:
+──────────────────────────────────────────
+- **內建測試** (go test, pytest, jest): 驗證業務邏輯、資料庫操作、複雜流程
+- **Newman Script**: 驗證 API 端點、Request/Response 格式、HTTP 狀態碼
+
 REQUIRED ACTIONS:
 
+⚠️ **STEP 2.0: 讀取 Postman Collection 範本格式** (MUST READ FIRST)
+   → Read .claude/templates/postman-collection-template.json
+   → Read .claude/templates/postman-environment-template.json
+   → 理解標準的 Postman Collection v2.1.0 JSON 格式
+   → 確保產出的 JSON 可直接 import 到 Postman
+
 1. 建立 Postman Collection (MUST create):
-   → 基於 OPENAPI.yaml 建立完整的測試案例
+   → **基於範本格式** 建立完整的測試案例
+   → **基於 OPENAPI.yaml** 建立所有端點的測試
    → 檔案: tests/postman/api-tests.postman_collection.json
+   → 格式: Postman Collection v2.1.0 JSON (參考範本)
 
 2. 建立 Environment 檔案 (MUST create):
-   → 定義環境變數 (API URL, Tokens, Test Data)
+   → **基於範本格式** 定義環境變數
    → 檔案: tests/postman/environments/dev.postman_environment.json
    → 檔案: tests/postman/environments/staging.postman_environment.json
+   → 格式: Postman Environment JSON (參考範本)
 
 3. 建立 Newman 執行腳本 (MUST create):
    → Bash script 執行 Newman
    → 檔案: tests/run-api-tests.sh
    → 產出測試報告 (HTML + JSON)
+
+──────────────────────────────────────────
+⭐ **Postman Collection JSON 格式要求** ⭐
+──────────────────────────────────────────
+
+**必須遵循 Postman Collection v2.1.0 Schema:**
+- Schema: https://schema.getpostman.com/json/collection/v2.1.0/collection.json
+- 格式必須能直接 import 到 Postman GUI
+- 所有 API 端點必須組織在 folders (item 陣列)
+
+**範本參考:** .claude/templates/postman-collection-template.json
+
+**關鍵結構:**
+```json
+{
+  "info": {
+    "_postman_id": "uuid-v4",
+    "name": "Project Name API Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Folder Name (e.g., Authentication)",
+      "item": [
+        {
+          "name": "Request Name (e.g., Register User)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": ["// Pre-request JavaScript code"],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"key\": \"value\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/endpoint",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "endpoint"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    }
+  ]
+}
+```
+
+**Environment JSON 格式:**
+```json
+{
+  "id": "uuid-v4",
+  "name": "Project Name - Development",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}
+```
 
 REQUIRED TESTS (基於 OPENAPI.yaml):
 
@@ -285,26 +474,44 @@ OUTPUT from STEP 2:
 ────────────────────
 必須產出以下檔案:
 
-1. tests/postman/api-tests.postman_collection.json
-   - 完整的 Postman Collection
-   - 包含所有 API 端點的測試
-   - 包含 Pre-request Scripts 與 Tests
+1. tests/postman/api-tests.postman_collection.json ⭐ 核心交付物
+   - **格式參考:** .claude/templates/postman-collection-template.json
+   - **Schema:** Postman Collection v2.1.0
+   - 完整的 Postman Collection (可直接 import 到 Postman)
+   - 包含所有 API 端點的測試 (基於 OPENAPI.yaml)
+   - 包含 Pre-request Scripts 與 Tests (JavaScript)
+   - 組織結構: 按功能分類到 folders (Authentication, Users, Error Handling, etc.)
 
-2. tests/postman/environments/dev.postman_environment.json
+2. tests/postman/environments/dev.postman_environment.json ⭐ 核心交付物
+   - **格式參考:** .claude/templates/postman-environment-template.json
    - Development 環境變數
-   - baseUrl, token, testData
+   - baseUrl, access_token, user_id, test_email, test_password
+   - 可直接 import 到 Postman
 
 3. tests/postman/environments/staging.postman_environment.json
+   - **格式參考:** .claude/templates/postman-environment-template.json
    - Staging 環境變數
+   - 與 dev 相同結構，不同 baseUrl
 
-4. tests/run-api-tests.sh
+4. tests/run-api-tests.sh ⭐ 核心交付物
    - Newman 執行腳本
    - 產出 HTML + JSON 報告
-   - 錯誤處理
+   - 錯誤處理與退出碼
+   - 範例:
+     ```bash
+     #!/bin/bash
+     newman run tests/postman/api-tests.postman_collection.json \
+       -e tests/postman/environments/dev.postman_environment.json \
+       --reporters cli,html,json \
+       --reporter-html-export tests/reports/newman-report.html \
+       --reporter-json-export tests/reports/newman-report.json
+     ```
 
 5. tests/README.md
    - 測試執行說明
    - 環境設定說明
+   - Postman Collection import 步驟
+   - Newman 安裝與執行指令
    - 故障排除指南
 
 6. 測試報告 (執行後產出):
@@ -782,7 +989,18 @@ OUTPUT FILES:
 - [根據實際完成項目填寫]
 - 所有 User Stories 已測試
 - 所有 API 端點已測試
-- E2E 測試已執行
+- **⭐ Newman/Postman Collection 已產出** (MANDATORY)
+  - [ ] tests/postman/api-tests.postman_collection.json
+    - [ ] 格式遵循 Postman Collection v2.1.0 Schema
+    - [ ] 包含 info.schema 欄位
+    - [ ] 可直接 import 到 Postman (驗證 JSON 格式正確)
+  - [ ] tests/postman/environments/dev.postman_environment.json
+    - [ ] 格式遵循 Postman Environment Schema
+    - [ ] 包含 _postman_variable_scope: "environment"
+    - [ ] 可直接 import 到 Postman
+  - [ ] tests/run-api-tests.sh (可執行的 Newman 腳本)
+  - [ ] tests/README.md (測試執行說明)
+- E2E 測試已執行 (若有前端)
 - 效能測試已執行
 - 安全測試已執行
 

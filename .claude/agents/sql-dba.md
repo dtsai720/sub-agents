@@ -315,7 +315,7 @@ YYYYMMDDHHMMSS_description.sql
 20240115103000_create_users_table.sql
 ```
 
-**Migration 模板：**
+**Migration 模板（⚠️ 必須包含 Transaction）：**
 ```sql
 -- Migration: 20240115103000_create_users_table.sql
 -- Description: 建立 users 表
@@ -338,6 +338,24 @@ COMMIT;
 -- DROP TABLE IF EXISTS users CASCADE;
 -- COMMIT;
 ```
+
+**⚠️ CRITICAL: Transaction 規範**
+- ✅ **所有 Migration 必須包含 BEGIN; 和 COMMIT;**
+- ✅ **UP Migration 和 DOWN Migration 都需要 Transaction**
+- ✅ 理由：確保資料庫變更的原子性（Atomicity）
+- ✅ 若 Migration 執行失敗，自動 ROLLBACK，不會留下部分變更
+- ✅ 範例結構：
+  ```sql
+  BEGIN;
+
+  CREATE TABLE users (...);
+  CREATE INDEX idx_users_email ON users(email);
+  ALTER TABLE users ADD CONSTRAINT ...;
+
+  COMMIT;
+  ```
+- ❌ 禁止省略 BEGIN/COMMIT
+- ❌ 禁止使用 Autocommit 模式
 
 **執行順序：**
 1. 建立表（無外鍵）
