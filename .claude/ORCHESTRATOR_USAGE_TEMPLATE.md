@@ -18,25 +18,25 @@
 ```javascript
 Task(
   subagent_type: "general-purpose",  // 真正調用的 agent 類型
-  description: "[簡短描述任務 3-5 字]",
+  description: "{task_summary_3_to_5_words}",
   prompt: `
     // 步驟 1: 載入執行規則 (非 Sub-Agent，是規則文件)
     ${readFile('.claude/templates/sub-agent-runtime-core.md')}
 
     // 步驟 2: 載入角色定義 (真正的 Sub-Agent 定義)
-    ${readFile('.claude/agents/{agent-name}.md')}
+    ${readFile('.claude/agents/{agent_name}.md')}
 
     [當前任務]
-    {具體任務描述}
+    {task_description}
 
     [輸入資料]
-    {提供給 Sub-Agent 的所有必要資訊}
+    {input_data_and_context}
 
-    [輸出要求]
-    {期望的交付物}
+    [預期輸出]
+    {expected_output_artifacts}
 
     [額外上下文]（選填）
-    {其他相關資訊}
+    {additional_context_if_needed}
   `
 )
 ```
@@ -44,10 +44,10 @@ Task(
 ### 關鍵要素
 
 1. **sub-agent-runtime-core.md** - 必須第一個**載入**（非調用），提供核心約束與標準回報格式
-2. **{agent-name}.md** - **載入**具體的 Sub-Agent 定義，提供專業領域知識
+2. **{agent_name}.md** - **載入**具體的 Sub-Agent 定義，提供專業領域知識
 3. **[當前任務]** - 明確說明要完成的任務
 4. **[輸入資料]** - 所有必要的上下文資訊（Agent 無法存取歷史）
-5. **[輸出要求]** - 期望的交付物格式
+5. **[預期輸出]** - 期望的交付物格式
 
 ---
 
@@ -78,7 +78,7 @@ Task(
     - 團隊規模: 5 人後端團隊
     - 預算限制: 中等預算
 
-    [輸出要求]
+    [預期輸出]
     - DESIGN.md: 完整的架構設計文件
     - OPENAPI.yaml: API 規格定義
     - 架構圖使用 Mermaid 格式
@@ -116,7 +116,7 @@ Task(
     - 將高層次資料模型轉換為詳細的資料庫設計
     - 為後端開發團隊提供資料庫實作指引
 
-    [輸出要求]
+    [預期輸出]
     - 完整的 Agent 定義檔案 (.claude/agents/database-architect.md)
     - 包含 frontmatter (name, description, model, color)
     - 遵循 agent-designer.md 的模板結構
@@ -158,7 +158,7 @@ Task(
     - 問題嚴重程度分級 (Critical/High/Medium/Low)
     - 具體的改進建議與範例代碼
 
-    [輸出要求]
+    [預期輸出]
     - 完整的提示詞文本 (英文)
     - 使用說明 (繁體中文)
     - 範例輸入與輸出

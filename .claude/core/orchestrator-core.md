@@ -128,15 +128,31 @@
 
 ## 執行模式
 
-**預設模式：半自動執行**
+**預設模式：半自動執行（自動連續調用）**
 
-自動連續調用 Sub-agent，僅在以下關鍵決策點暫停：
-1. ✋ Implementation Plan 審查（Backend Developer 產出 IMPLEMENTATION_PLAN 後）
-2. ✋ 代碼審查報告（Backend Code Reviewer 發現 Critical Issues 時）
-3. ✋ 測試失敗（QA 發現重大問題時）
+⚠️ **核心原則：Orchestrator 必須自動連續調用 Sub-agent，不等待用戶確認**
 
-其他階段（Product Manager → Architect → API Designer → DBA → DB Ops → 實作）自動執行
+**自動執行規則：**
+- ✅ Sub-agent 執行完成後，**立即**讀取交付物並調用下一個 Agent
+- ✅ 無需向用戶確認或等待批准（除非遇到下方的暫停點）
+- ✅ 使用 TodoWrite 追蹤進度，但不暫停執行流程
+- ✅ 在單次回應中**連續執行多個調用**（讀取文件 → 調用 Agent → 讀取輸出 → 調用下一個 Agent）
 
+**僅在以下關鍵決策點暫停（等待用戶確認）：**
+1. ✋ **Implementation Plan 審查**（Backend Developer 產出 IMPLEMENTATION_PLAN 後）
+   - 呈現計畫給用戶
+   - 等待用戶批准後才進入實際開發
+2. ✋ **代碼審查報告**（Backend Code Reviewer 發現 Critical Issues 時）
+   - 呈現問題清單
+   - 等待用戶決定：修復 / 接受風險 / 調整範圍
+3. ✋ **測試失敗**（QA 發現重大問題時）
+   - 呈現測試報告
+   - 等待用戶決定：修復 / 調整需求
+
+**自動執行的階段（無需用戶確認）：**
+- Product Manager → Architect → API Designer → DBA → DB Ops → Backend Plan → Frontend Plan → Code Review → QA
+
+**模式切換：**
 用戶可隨時要求切換為「全自動」或「完全手動」模式
 
 ---

@@ -14,16 +14,26 @@
 - **.claude/core/quality-control.md** - 品質控制與驗證
 
 **工作流程文件（按需讀取）：**
+- **.claude/workflows/product-development-flow.md** - 產品開發流程（完整版）
+- **.claude/workflows/codebase-analysis-flow.md** - 分析現有代碼庫與架構
+- **.claude/workflows/bug-fix-flow.md** - Bug 修復流程（按影響範圍分類）⭐ NEW
 - **.claude/workflows/requirement-completion.md** - 需求不完整時
 - **.claude/workflows/feature-duplication-check.md** - PROD.md 產出後檢查重複功能
 - **.claude/workflows/error-handling.md** - 遇到錯誤時
 - **.claude/workflows/execution-examples.md** - 參考完整執行案例
 
 **Sub-agent 定義：**
-- **.claude/agents/{Agent名稱}.md** - 調用前讀取角色定義
+- **.claude/agents/{Agent名稱}.md** - Sub-Agent 角色定義（調用時載入到 prompt 中）
 
 **調用規範：**
 - **.claude/ORCHESTRATOR_USAGE_TEMPLATE.md** - Sub-Agent 調用範例與最佳實踐
+
+**⚠️ 重要：如何正確調用 Sub-Agent**
+```
+使用 Task tool 調用，而非 Read tool：
+✅ 正確：Task(subagent_type="general-purpose", prompt="...")
+❌ 錯誤：Read(.claude/agents/product-manager.md)
+```
 
 ---
 
@@ -84,10 +94,11 @@
 請告訴我您的需求，我將為您規劃最適合的開發路徑。
 
 💡 您可以：
-- 描述產品想法（「我想做一個...」）
-- 提出技術需求（「實作 POST /users API」）
-- 請求檢視文件（「請檢視這個設計文件」）
-- 增強現有功能（「我的 XX API 需要加上 YY 功能」）
+- 描述產品想法（「我想做一個 {產品名稱}」）
+- 提出技術需求（「實作 {HTTP method} {API endpoint}」）
+- 請求檢視文件（「請檢視 {文件路徑/設計文件}」）
+- 增強現有功能（「我的 {API/功能} 需要加上 {新功能描述}」）
+- 分析現有代碼（「請分析 {repository} 的架構和代碼品質」）
 - 查看專案狀態（「目前進度如何？」）
 ```
 
@@ -98,6 +109,8 @@
 2. **技術實現流程** - 從文件到代碼
 3. **文件檢視流程** - 檢查設計與慣例差異
 4. **現有專案增強流程** - 修改/新增功能
+5. **代碼庫分析流程** - 分析現有代碼與架構（測試/評估/重構前）
+6. **Bug 修復流程** - Code Review 後的問題修復（按影響範圍分類）⭐ NEW
 
 若資訊不足：
 ```
@@ -107,7 +120,31 @@
 
 ### 步驟 4：開始執行
 
-- 調用第一個 Sub-agent
+**使用 Task tool 調用 Sub-agent（不是 Read tool）：**
+
+```
+正確調用方式：
+→ Task(
+    subagent_type: "general-purpose",
+    description: "{agent_name} {action_description}",
+    prompt: `
+      ${載入 .claude/templates/sub-agent-runtime-core.md 的內容}
+      ${載入 .claude/agents/{agent_file}.md 的內容}
+
+      [當前任務]
+      {task_description}
+
+      [輸入資料]
+      {input_data_or_context}
+
+      [預期輸出]
+      {expected_output_artifacts}
+    `
+  )
+
+詳細範例請參考：.claude/ORCHESTRATOR_USAGE_TEMPLATE.md
+```
+
 - 進入對應的工作流程
 
 **自檢失敗處理：**
@@ -214,6 +251,71 @@ API Designer + DBA (若需要) → DB Ops（若涉及運維變更）→
 Backend Code Reviewer（檢查相容性）→ QA（新功能 + 迴歸測試）
 ```
 
+### 5. 代碼庫分析流程
+
+**觸發條件：** 用戶要求分析現有專案、測試 sub-agent 配置、重構前評估
+
+**主要階段：**
+```
+Architect（架構分析）→
+Backend Code Reviewer + Frontend Code Reviewer（並行）→
+根據發現問題選擇：SQL/NoSQL DBA、QA、DevOps、DB Ops
+```
+
+**詳細流程：**
+```
+→ Read .claude/workflows/codebase-analysis-flow.md
+```
+
+**快速指令：**
+- 完整分析（3 agents）：「請依序調用 Architect、Backend Code Reviewer、Frontend Code Reviewer 分析 {repository}」
+- 快速驗證（1 agent）：「請調用 Architect 分析 {repository} 架構」
+- 深度分析（5+ agents）：「請執行 {repository} 完整代碼庫分析，包含專業領域評估」
+
+### 6. Bug 修復流程（按影響範圍分類）⭐ NEW
+
+**觸發條件：** Code Review 發現問題、用戶要求修復 bugs、技術債務處理
+
+**分類標準（自動判斷）：**
+```
+Critical/High Priority (影響用戶) → PM 追蹤
+  - 影響用戶體驗、服務不可用、法律風險、數據完整性
+  - 流程：Orchestrator → Developer → Code Reviewer → QA → PM (事後記錄)
+
+Medium/Low Priority (技術債) → Orchestrator 追蹤
+  - 代碼品質、效能優化、測試覆蓋率、文件補充
+  - 流程：Orchestrator → Developer → 記錄到 CHANGELOG.md
+
+Security Issues (安全漏洞) → Orchestrator 緊急流程
+  - SQL injection、XSS、權限問題、依賴套件漏洞
+  - 流程：Orchestrator → 最高優先級修復 → PM 評估用戶通知
+```
+
+**主要階段（Critical/High Priority）：**
+```
+Orchestrator 建立 FIXES_TRACKING.md →
+調用 Developer Agents（快速修復）→
+調用 Code Reviewer（驗證）→
+調用 QA（測試）→
+調用 PM Agent（事後記錄到 PROD.md）→
+調用 Git Manager（提交 + PR）
+```
+
+**詳細流程：**
+```
+→ Read .claude/workflows/bug-fix-flow.md
+```
+
+**觸發關鍵字：**
+- 用戶明確說明：「請修復 Code Review 發現的問題」
+- 檔案觸發：偵測到 `CODE_REVIEW_REPORT.md` 或 `FIXES_TRACKING.md`
+- 關鍵字：「bug fix」、「修復」、「technical debt」、「審查發現」
+
+**與其他流程的差異：**
+- 產品開發流程：新功能（PM → Architect → Developer）
+- Bug 修復流程：修復問題（Developer → PM 事後記錄）
+- 代碼庫分析：產出 Review Reports → 觸發 Bug Fix Flow
+
 ---
 
 ## 關鍵決策點與暫停機制
@@ -305,24 +407,27 @@ IF (用戶詢問進度 OR 說「從上次中斷處繼續」):
 ### 標準 PROJECT_STATUS.md 格式
 
 ```yaml
-Current Phase: [當前階段]
-Overall Progress: [X/Y stages completed]
-Last Updated: [ISO 8601 timestamp]
+Current Phase: {phase_name}
+Overall Progress: {completed_count}/{total_count} stages completed
+Last Updated: {YYYY-MM-DDTHH:MM:SSZ}
 
 ## Completed Stages
-- ✅ [已完成階段清單]
+- ✅ {completed_stage_1}
+- ✅ {completed_stage_2}
 
 ## Current Stage
-- 🔄 [當前執行階段和進度]
+- 🔄 {current_stage_name and progress_description}
 
 ## Pending Stages
-- ⏳ [待執行階段清單]
+- ⏳ {pending_stage_1}
+- ⏳ {pending_stage_2}
 
 ## Artifacts Produced
-- [已產出的交付物清單]
+- {artifact_path_1}
+- {artifact_path_2}
 
 ## Next Actions
-- [明確的下一步指令]
+- {next_action_description}
 ```
 
 ---

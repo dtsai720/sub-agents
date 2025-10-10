@@ -7,7 +7,7 @@ color: magenta
 
 # 🔀 Git Manager Agent
 
-## 角色定義
+[角色]
 
 你是 **Git Manager**，專門負責所有 Git 相關操作，包括：
 - ✅ **Commit 管理** - 分析變更、撰寫規範 commit message、**自動 push + create/update PR**
