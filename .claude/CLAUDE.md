@@ -68,9 +68,12 @@
 - ✅ NoSQL DBA (.claude/agents/nosql-dba.md)
 - ✅ DB Ops (.claude/agents/db-ops.md)
 - ✅ Backend Code Reviewer (.claude/agents/backend-code-reviewer.md)
-- ⚠️ DevOps (.claude/agents/devops.md) - 選用
-- ⚠️ UI/UX設計師 - 未找到
-- ⚠️ 前端開發 - 未找到
+- ✅ DevOps (.claude/agents/devops.md)
+- ✅ Git Manager (.claude/agents/git-manager.md)
+- ✅ UI/UX 設計師 (.claude/agents/ui-ux-designer.md)
+- ✅ 前端開發 (.claude/agents/frontend-developer.md)
+- ✅ Frontend Code Reviewer (.claude/agents/frontend-code-reviewer.md)
+- ✅ Mobile Developer (Flutter) (.claude/agents/mobile-developer-flutter.md)
 
 **系統狀態：** 可正常運作
 
@@ -137,15 +140,19 @@
 | DB Ops | `.claude/agents/db-ops.md` | BACKUP_STRATEGY.md + HA_DR_PLAN.md + MONITORING_SETUP.md + SECURITY_HARDENING.md + DB_OPS_RUNBOOK.md | ✅ |
 | Backend Code Reviewer | `.claude/agents/backend-code-reviewer.md` | CODE_REVIEW_REPORT.md | ✅ |
 | DevOps | `.claude/agents/devops.md` | Terraform configs + CI/CD pipeline + DEPLOYMENT_GUIDE.md | ✅ |
-| UI/UX 設計師 | N/A | Design Specs | ⚠️ 未實作 |
-| 前端開發 | N/A | Frontend Source Code | ⚠️ 未實作 |
-| Frontend Code Reviewer | N/A | Frontend Code Review Report | ⚠️ 未實作 |
+| Git Manager | `.claude/agents/git-manager.md` | Git commits + Pull Requests + Branch management | ✅ |
+| UI/UX 設計師 | `.claude/agents/ui-ux-designer.md` | UI_UX_DESIGN.md (Design System, User Flows, Wireframes, Accessibility) | ✅ |
+| 前端開發 | `.claude/agents/frontend-developer.md` | Frontend Source Code + Tests + IMPLEMENTATION_PLAN_FRONTEND.md | ✅ |
+| Frontend Code Reviewer | `.claude/agents/frontend-code-reviewer.md` | FRONTEND_CODE_REVIEW_REPORT.md | ✅ |
+| Mobile Developer (Flutter) | `.claude/agents/mobile-developer-flutter.md` | Flutter Source Code + Tests + IMPLEMENTATION_PLAN_MOBILE_FLUTTER.md | ✅ |
 
 ---
 
 ## 工作流程概覽
 
-**詳細流程說明請參考原始 CLAUDE.md.backup 或建立專門的 workflow 檔案**
+**詳細流程說明請參考：**
+- `.claude/workflows/product-development-flow.md` - 產品開發流程（完整版）
+- `.claude/CLAUDE.md.backup` - 原始完整配置（備份）
 
 ### 1. 產品開發流程（從想法到產品）
 
@@ -153,10 +160,24 @@
 
 **主要階段：**
 ```
-產品經理 → 功能重複檢查 → UI/UX設計師（選用）→ 雲端架構師 →
+產品經理 → 功能重複檢查 → UI/UX決策 ⭐ 可選 → 雲端架構師 →
 API Designer + DBA (並行) → DB Ops（若生產環境）→
 交付物檢查 → 開發（Plan → 審查 → 實作）→ API同步檢查 →
 Backend Code Reviewer → QA → DevOps（若生產環境）
+```
+
+**⭐ UI/UX 階段可選邏輯：**
+
+Orchestrator 讀取 PROD.md 判斷 UI Type：
+
+- **UI Type: API Backend Only** → 跳過 UI/UX 設計師，使用 Swagger UI
+- **UI Type: Bootstrap/Tailwind** → 跳過 UI/UX 設計師，使用現成框架
+- **UI Type: Custom Design** → 調用 UI/UX 設計師 Agent
+- **未標記** → 詢問用戶選擇 A/B/C
+
+詳細邏輯：
+```
+→ Read .claude/workflows/product-development-flow.md (步驟 3)
 ```
 
 ### 2. 技術實現流程（從文件到代碼）

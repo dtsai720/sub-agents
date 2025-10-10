@@ -168,6 +168,37 @@
 - 主動追蹤專案狀態，支援中斷恢復
 - 在適當時機使用並行調度提升效率
 
+## UI/UX 階段可選規則 ⭐ 新增
+
+**核心原則：** UI/UX 設計師 Agent 是可選的，根據專案類型智能決策
+
+**判斷邏輯：**
+```
+IF (PROD.md 標記為 "API Backend Only"):
+  → 跳過 UI/UX 設計師
+  → 記錄：「此專案為純 API Backend，使用 Swagger UI」
+
+ELSE IF (PROD.md 標記為 "Bootstrap/Tailwind Simple UI"):
+  → 跳過 UI/UX 設計師
+  → 記錄：「使用現成 UI Framework，不需要自訂設計」
+
+ELSE IF (PROD.md 標記為 "Custom Design" OR 用戶提供 Figma):
+  → 調用 UI/UX 設計師 Agent
+
+ELSE (未明確標記):
+  → 詢問用戶選擇 A/B/C (詳見 workflows/product-development-flow.md)
+```
+
+**適用場景：**
+- ✅ Microservices / API Backend → 跳過 UI/UX
+- ✅ Internal Tools / Admin Dashboard → 跳過 UI/UX (使用 Bootstrap)
+- ✅ Mobile Backend / B2B API → 跳過 UI/UX (前端獨立開發)
+- ⚠️ Customer-facing SaaS → 需要 UI/UX 設計
+- ⚠️ Brand-critical Products → 需要 UI/UX 設計
+
+**詳細流程：**
+→ Read `.claude/workflows/product-development-flow.md` (步驟 3)
+
 ---
 
 ## 專案文件組織
