@@ -77,10 +77,7 @@
 - ✅ SQL DBA (.claude/agents/sql-dba.md)
 - ✅ NoSQL DBA (.claude/agents/nosql-dba.md)
 - ✅ DB Ops (.claude/agents/db-ops.md)
-- ✅ Architect Reviewer (.claude/agents/architect-reviewer.md)
 - ✅ Backend Code Reviewer (.claude/agents/backend-code-reviewer.md)
-- ✅ Debugger (.claude/agents/debugger.md)
-- ✅ Context Manager (.claude/agents/context-manager.md)
 - ✅ DevOps (.claude/agents/devops.md)
 - ✅ Git Manager (.claude/agents/git-manager.md)
 - ✅ UI/UX 設計師 (.claude/agents/ui-ux-designer.md)
@@ -178,10 +175,7 @@
 | SQL DBA | `.claude/agents/sql-dba.md` | SCHEMA.sql + Migration Scripts + QUERY_OPTIMIZATION.md | ✅ |
 | NoSQL DBA | `.claude/agents/nosql-dba.md` | NOSQL_SCHEMA.md + INDEX_STRATEGY.md + DATA_MODEL.json | ✅ |
 | DB Ops | `.claude/agents/db-ops.md` | BACKUP_STRATEGY.md + HA_DR_PLAN.md + MONITORING_SETUP.md + SECURITY_HARDENING.md + DB_OPS_RUNBOOK.md | ✅ |
-| Architect Reviewer | `.claude/agents/architect-reviewer.md` | ARCHITECTURE_REVIEW_REPORT.md | ✅ |
 | Backend Code Reviewer | `.claude/agents/backend-code-reviewer.md` | CODE_REVIEW_REPORT.md | ✅ |
-| Debugger | `.claude/agents/debugger.md` | DEBUG_REPORT.md | ✅ |
-| Context Manager | `.claude/agents/context-manager.md` | CONTEXT_SUMMARY.md + DECISION_LOG.md | ✅ |
 | DevOps | `.claude/agents/devops.md` | Terraform configs + CI/CD pipeline + DEPLOYMENT_GUIDE.md | ✅ |
 | Git Manager | `.claude/agents/git-manager.md` | Git commits + Pull Requests + Branch management | ✅ |
 | UI/UX 設計師 | `.claude/agents/ui-ux-designer.md` | UI_UX_DESIGN.md (Design System, User Flows, Wireframes, Accessibility) | ✅ |
@@ -204,9 +198,9 @@
 **主要階段：**
 ```
 產品經理 → 功能重複檢查 → UI/UX決策 ⭐ 可選 → 雲端架構師 →
-Architect Reviewer ⭐ 條件觸發 → API Designer + DBA (並行) →
-DB Ops（若生產環境）→ 交付物檢查 → 開發（Plan → 審查 → 實作）→
-API同步檢查 → Backend Code Reviewer → QA → DevOps（若生產環境）
+API Designer + DBA (並行) → DB Ops（若生產環境）→
+交付物檢查 → 開發（Plan → 審查 → 實作）→ API同步檢查 →
+Backend Code Reviewer → QA → DevOps（若生產環境）
 ```
 
 **⭐ UI/UX 階段可選邏輯：**
@@ -223,43 +217,16 @@ Orchestrator 讀取 PROD.md 判斷 UI Type：
 → Read .claude/workflows/product-development-flow.md (步驟 3)
 ```
 
-**⭐ Architect Reviewer 階段條件觸發邏輯：**
-
-Orchestrator 在 Architect 完成設計後，自動判斷是否調用 Architect Reviewer：
-
-**觸發條件（任一符合即調用）：**
-- API 端點數量 > 10
-- 資料實體數量 > 5
-- 微服務數量 > 2
-- 涉及生產環境部署
-- 安全性需求 = High（或提到 PCI-DSS、GDPR、HIPAA、SOC2）
-
-**品質門檻：**
-- Critical Issues = 0 才能進入開發階段
-- Major Issues > 3 需要用戶明確接受風險
-
-**跳過審查的情況：**
-- 小型專案（API < 10, 實體 < 5, 單體應用）
-- 開發環境 POC
-- 安全性需求 Low
-
-詳細邏輯：
-```
-→ Read .claude/workflows/product-development-flow.md (步驟 4.5)
-```
-
 ### 2. 技術實現流程（從文件到代碼）
 
 **觸發條件：** 用戶提供技術文件、OPENAPI.yaml 或明確 API 需求
 
 **主要階段：**
 ```
-雲端架構師 → Architect Reviewer ⭐ 條件觸發 → DevOPS（環境配置）→
-API Designer + DBA (並行) → DB Ops（若生產環境）→ 交付物檢查 →
-開發（Plan → 審查 → 實作）→ API同步檢查 → Backend Code Reviewer → QA
+雲端架構師 → DevOPS（環境配置）→ API Designer + DBA (並行) →
+DB Ops（若生產環境）→ 交付物檢查 → 開發（Plan → 審查 → 實作）→
+API同步檢查 → Backend Code Reviewer → QA
 ```
-
-**註：** Architect Reviewer 條件觸發邏輯與產品開發流程相同
 
 ### 3. 文件檢視流程
 
@@ -279,12 +246,10 @@ API Designer + DBA (並行) → DB Ops（若生產環境）→ 交付物檢查 �
 **主要階段：**
 ```
 開發 Agent 分析現有實作 → 雲端架構師設計整合方案 →
-Architect Reviewer ⭐ 條件觸發 → API Designer + DBA (若需要) →
-DB Ops（若涉及運維變更）→ 開發（Plan → 審查 → 實作）→ API同步檢查 →
+API Designer + DBA (若需要) → DB Ops（若涉及運維變更）→
+開發（Plan → 審查 → 實作）→ API同步檢查 →
 Backend Code Reviewer（檢查相容性）→ QA（新功能 + 迴歸測試）
 ```
-
-**註：** 若整合方案涉及重大架構調整，建議調用 Architect Reviewer
 
 ### 5. 代碼庫分析流程
 

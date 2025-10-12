@@ -136,6 +136,131 @@ ENDIF
 
 ---
 
+### 步驟 4.5: 架構設計審查（條件觸發）⭐ 新增
+
+**Orchestrator 判斷邏輯：**
+
+```
+→ Read docs/CLOUD_ARCHITECTURE.md
+→ Read docs/API_ENDPOINTS.md
+→ Read docs/ER_DIAGRAM.md
+→ Read docs/PROD.md
+
+計算複雜度指標：
+- API_COUNT = 計算 API_ENDPOINTS.md 中的端點數量
+- ENTITY_COUNT = 計算 ER_DIAGRAM.md 中的實體數量
+- SERVICE_COUNT = 計算 CLOUD_ARCHITECTURE.md 中的微服務數量
+- IS_PRODUCTION = 檢查 PROD.md 是否標註生產環境部署
+- SECURITY_LEVEL = 檢查 PROD.md 安全性需求（High/Medium/Low）
+
+觸發條件（任一符合即調用 Architect Reviewer）：
+IF (API_COUNT > 10 OR
+    ENTITY_COUNT > 5 OR
+    SERVICE_COUNT > 2 OR
+    IS_PRODUCTION = true OR
+    SECURITY_LEVEL = "High" OR
+    PROD.md 提到 "PCI-DSS" OR "GDPR" OR "HIPAA" OR "SOC2"):
+  THEN:
+    → 記錄決策：「專案複雜度達標，調用 Architect Reviewer 進行架構審查」
+    → 調用 Architect Reviewer Agent
+ELSE:
+  → 記錄決策：「專案規模小且安全性需求一般，跳過架構審查」
+  → 直接進入步驟 5
+ENDIF
+```
+
+**調用 Agent:** Architect Reviewer Agent
+
+**輸入：**
+- `docs/CLOUD_ARCHITECTURE.md`（必要）
+- `docs/API_ENDPOINTS.md`（必要）
+- `docs/ER_DIAGRAM.md`（必要）
+- `docs/PROD.md`（選擇性，用於評估技術選型與需求對齊）
+
+**輸出：** `docs/ARCHITECTURE_REVIEW_REPORT.md`
+
+**審查結果處理：**
+
+```
+→ Read docs/ARCHITECTURE_REVIEW_REPORT.md
+→ 提取審查結果：
+  - Critical Issues Count
+  - Major Issues Count
+  - Minor Issues Count
+  - Overall Score
+
+IF (Critical Issues Count > 0):
+  THEN:
+    → 向用戶回報：
+      「❌ 架構審查發現 {count} 個 Critical Issues，必須修復後才能進入開發階段。
+
+      Critical Issues:
+      {列出所有 Critical Issues 摘要}
+
+      建議行動：
+      - 推薦 Agent: Architect Agent（重新設計）
+      - 預估時間：{時間} 分鐘
+
+      詳細審查報告：docs/ARCHITECTURE_REVIEW_REPORT.md」
+
+    → STOP: 等待用戶確認是否回到 Architect Agent 修復
+
+ELSE IF (Major Issues Count > 3):
+  THEN:
+    → 向用戶回報：
+      「⚠️ 架構審查發現 {count} 個 Major Issues，強烈建議修復後再進入開發。
+
+      Major Issues:
+      {列出前 3 個 Major Issues 摘要}
+
+      選項：
+      A. 修復 Major Issues（推薦）- 回到 Architect Agent
+      B. 接受風險，繼續開發 - 進入步驟 5
+
+      詳細審查報告：docs/ARCHITECTURE_REVIEW_REPORT.md」
+
+    → 等待用戶選擇
+    → IF (用戶選擇 A): 回到 Architect Agent
+    → IF (用戶選擇 B): 記錄風險接受，進入步驟 5
+
+ELSE IF (Major Issues Count 1-3):
+  THEN:
+    → 向用戶回報：
+      「✅ 架構審查通過，發現 {count} 個 Major Issues（可接受範圍）。
+
+      建議：可在開發過程中優化這些項目。
+      詳細審查報告：docs/ARCHITECTURE_REVIEW_REPORT.md
+
+      繼續進入步驟 5（API 與資料庫詳細設計）。」
+
+    → 自動進入步驟 5
+
+ELSE:
+  THEN:
+    → 向用戶回報：
+      「✅ 架構審查通過，設計品質優良（Overall Score: {score}/10）。
+
+      詳細審查報告：docs/ARCHITECTURE_REVIEW_REPORT.md
+
+      繼續進入步驟 5（API 與資料庫詳細設計）。」
+
+    → 自動進入步驟 5
+ENDIF
+```
+
+**品質門檻：**
+- Critical Issues = 0 才能進入開發階段
+- Major Issues > 3 需要用戶明確接受風險
+- Major Issues ≤ 3 可自動通過
+
+**跳過審查的情況：**
+- 小型專案（API < 10, 實體 < 5, 單體應用）
+- 開發環境 POC
+- 安全性需求 Low
+- 不涉及生產環境部署
+
+---
+
 ### 步驟 5: API 與資料庫設計（可並行）
 
 #### 5.1 API 設計

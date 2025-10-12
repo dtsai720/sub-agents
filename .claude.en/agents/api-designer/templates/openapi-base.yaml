@@ -1,0 +1,429 @@
+openapi: 3.0.3
+info:
+  title: [API Name]
+  version: 1.0.0
+  description: |
+    [API Description]
+
+    ## Authentication
+    This API uses JWT Bearer Token authentication:
+    - `Authorization: Bearer <token>`
+    - `x-user-id: <user_id>` (from upstream API Gateway)
+    - `x-tenant-id: <tenant_id>` (from upstream API Gateway)
+
+    ## Pagination
+    List endpoints support offset-based pagination:
+    - `page`: Page number (starts from 1)
+    - `limit`: Items per page (default 20, max 100)
+
+    ## Error Handling
+    All error responses follow RFC 7807 Problem Details format.
+
+  contact:
+    name: API Support
+    email: api-support@example.com
+    url: https://example.com/support
+
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production server
+  - url: https://staging-api.example.com/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: Authentication endpoints
+  - name: Users
+    description: User management endpoints
+  - name: Admin
+    description: Admin endpoints
+
+paths:
+  /users:
+    get:
+      summary: Get user list
+      description: |
+        Retrieve paginated user list with optional filtering.
+
+        **Permissions:**
+        - Authentication: JWT Bearer Token required
+        - Roles: user, admin
+
+        **Pagination:**
+        - Default: 20 items per page
+        - Maximum: 100 items per page
+
+      operationId: getUserList
+      tags:
+        - Users
+
+      security:
+        - BearerAuth: []
+        - UserIdHeader: []
+        - TenantIdHeader: []
+
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsersResponse'
+              examples:
+                first_page:
+                  summary: First page result
+                  value:
+                    data:
+                      - id: "123e4567-e89b-12d3-a456-426614174000"
+                        name: "張三"
+                        email: "zhang.san@example.com"
+                        phone: "0912345678"
+                        created_at: "2024-01-15T10:30:00Z"
+                        updated_at: "2024-01-15T10:30:00Z"
+                    pagination:
+                      total: 100
+                      page: 1
+                      limit: 20
+                      has_next: true
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Create user
+      description: Create a new user account
+      operationId: createUser
+      tags:
+        - Users
+
+      security:
+        - BearerAuth: []
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+            examples:
+              valid_request:
+                summary: Valid create user request
+                value:
+                  name: "張三"
+                  email: "zhang.san@example.com"
+                  password: "SecurePass123"
+                  phone: "0912345678"
+
+      responses:
+        '201':
+          description: User created successfully
+          headers:
+            Location:
+              description: URL of the created user
+              schema:
+                type: string
+              example: "/v1/users/123e4567-e89b-12d3-a456-426614174000"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+        '400':
+          $ref: '#/components/responses/ValidationError'
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+        '409':
+          $ref: '#/components/responses/ConflictError'
+
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User unique identifier
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: User name
+          example: "張三"
+        email:
+          type: string
+          format: email
+          description: User email
+          example: "user@example.com"
+        phone:
+          type: string
+          pattern: '^[0-9]{10}$'
+          description: User phone number (10 digits)
+          example: "0912345678"
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2024-01-15T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2024-01-15T10:30:00Z"
+
+    CreateUserRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: User name
+          example: "張三"
+        email:
+          type: string
+          format: email
+          description: User email
+          example: "user@example.com"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$'
+          description: Password must contain lowercase, uppercase, and digit
+          example: "SecurePass123"
+        phone:
+          type: string
+          pattern: '^[0-9]{10}$'
+          description: User phone number (10 digits)
+          example: "0912345678"
+
+    PaginatedUsersResponse:
+      type: object
+      required:
+        - data
+        - pagination
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      required:
+        - total
+        - page
+        - limit
+      properties:
+        total:
+          type: integer
+          description: Total number of items
+          example: 100
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          description: Items per page
+          example: 20
+        has_next:
+          type: boolean
+          description: Whether there are more pages
+          example: true
+
+    Error:
+      type: object
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          description: Error type URI
+          example: "https://api.example.com/errors/validation-error"
+        title:
+          type: string
+          description: Error title
+          example: "Validation Error"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        detail:
+          type: string
+          description: Detailed error message
+          example: "Email field is required"
+        instance:
+          type: string
+          description: Request path where error occurred
+          example: "/v1/users"
+        trace_id:
+          type: string
+          description: Trace ID for debugging
+          example: "abc123xyz"
+        errors:
+          type: array
+          description: Validation error details
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "email"
+              message:
+                type: string
+                example: "Invalid email format"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Bearer Token authentication
+
+    UserIdHeader:
+      type: apiKey
+      in: header
+      name: x-user-id
+      description: User ID from upstream API Gateway
+
+    TenantIdHeader:
+      type: apiKey
+      in: header
+      name: x-tenant-id
+      description: Tenant ID from upstream API Gateway
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized - Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/unauthorized"
+            title: "Unauthorized"
+            status: 401
+            detail: "Missing or invalid authentication token"
+            trace_id: "abc123"
+
+    ForbiddenError:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/forbidden"
+            title: "Forbidden"
+            status: 403
+            detail: "You do not have permission to access this resource"
+            trace_id: "abc123"
+
+    NotFoundError:
+      description: Not Found - Resource does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/not-found"
+            title: "Not Found"
+            status: 404
+            detail: "The requested resource was not found"
+            trace_id: "abc123"
+
+    ConflictError:
+      description: Conflict - Resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/conflict"
+            title: "Conflict"
+            status: 409
+            detail: "A user with this email already exists"
+            trace_id: "abc123"
+
+    ValidationError:
+      description: Bad Request - Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/validation-error"
+            title: "Validation Error"
+            status: 400
+            detail: "Request validation failed"
+            trace_id: "abc123"
+            errors:
+              - field: "email"
+                message: "Invalid email format"
+              - field: "password"
+                message: "Password must be at least 8 characters"
+
+    InternalServerError:
+      description: Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: "https://api.example.com/errors/internal-server-error"
+            title: "Internal Server Error"
+            status: 500
+            detail: "An unexpected error occurred"
+            trace_id: "abc123"
